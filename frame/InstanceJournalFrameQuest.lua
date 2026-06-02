@@ -521,14 +521,38 @@ local function IJ_PingMapCoordinates(x, y, pingType, mapContinent, mapZone, targ
         GameTooltip:Hide()
     end)
 
+    pingFrame:SetScript("OnUpdate", nil)
     pingFrame:Show()
     pingFrame.timer = 0
     pingFrame.visible = true
+
+    -- Hide pfQuest map pins for the duration of the flash so IJ_QuestMapPing is visible
+    local ijHiddenPins = {}
+    if pfQuest then
+        local i = 1
+        while true do
+            local pin = getglobal("pfMapPin" .. i)
+            if not pin then break end
+            if pin:IsVisible() then
+                pin:Hide()
+                ijHiddenPins[i] = true
+            end
+            i = i + 1
+        end
+    end
 
     pingFrame:SetScript("OnUpdate", function()
         if not WorldMapFrame:IsVisible() or GetCurrentMapContinent() ~= this.mapContinent or GetCurrentMapZone() ~= this.mapZone then
             this:Hide()
             this:SetScript("OnUpdate", nil)
+
+            if pfQuest then
+                for idx in pairs(ijHiddenPins) do
+                    local pin = getglobal("pfMapPin" .. idx)
+                    if pin then pin:Show() end
+                end
+                ijHiddenPins = {}
+            end
 
             return
         end
@@ -539,6 +563,14 @@ local function IJ_PingMapCoordinates(x, y, pingType, mapContinent, mapZone, targ
             if not this.visible then
                 this.icon:Show()
                 this.visible = true
+            end
+
+            if pfQuest and ijHiddenPins[1] then
+                for idx in pairs(ijHiddenPins) do
+                    local pin = getglobal("pfMapPin" .. idx)
+                    if pin then pin:Show() end
+                end
+                ijHiddenPins = {}
             end
         else
             if math.mod(math.floor(this.timer * 4), 2) == 0 then
